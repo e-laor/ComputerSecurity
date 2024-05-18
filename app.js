@@ -1,31 +1,27 @@
-// Filename - App.js
-
 const express = require("express"),
-mongoose = require("mongoose"),
-passport = require("passport"),
-bodyParser = require("body-parser"),
-LocalStrategy = require("passport-local"),
-passportLocalMongoose = require("passport-local-mongoose");
+  mongoose = require("mongoose"),
+  passport = require("passport"),
+  bodyParser = require("body-parser"),
+  LocalStrategy = require("passport-local"),
+  passportLocalMongoose = require("passport-local-mongoose"),
+  session = require("express-session");
 const User = require("./model/User");
 const crypto = require('crypto');
+const connectDB = require("./DB");
 
 let app = express();
-
-const { MongoClient, ServerApiVersion } = require("mongodb");
-
-// Database Connection
-const connectDB = require("./DB");
 connectDB();
+
+// Serve static files from the "public" directory
+app.use(express.static(__dirname + "/public"));
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(
-  require("express-session")({
-    secret: crypto.randomBytes(64).toString('hex'),
-    resave: false,
-    saveUninitialized: false,
-  })
-);
+app.use(session({
+  secret: crypto.randomBytes(64).toString('hex'),
+  resave: false,
+  saveUninitialized: false,
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -34,64 +30,66 @@ passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
+// Middleware to make 'user' available in all templates
+app.use((req, res, next) => {
+  res.locals.user = req.user;
+  next();
+});
+
+app.use((req, res, next) => {
+  console.log(`Request URL: ${req.url}`);
+  next();
+});
 //=====================
 // ROUTES
 //=====================
 
 // Showing home page
 app.get("/", function (req, res) {
-  res.render("home");
+  res.render("home", { title: "Home" });
 });
 
 // Showing secret page
 app.get("/secret", isLoggedIn, function (req, res) {
-  res.render("secret");
+  res.render("secret", { title: "Secret" });
 });
 
 // Showing register form
 app.get("/register", function (req, res) {
-  res.render("register");
+  res.render("register", { title: "Register" });
+});
+
+// Middleware to make 'user' available in all templates
+app.use((req, res, next) => {
+  res.locals.user = req.user;
+  next();
 });
 
 // Handling user signup
 app.post("/register", async (req, res) => {
-  const user = await User.create({
-    username: req.body.username,
-    password: req.body.password,
-    email: req.body.email,
-  });
-
-  return res.status(200).json(user);
-});
-
-//Showing login form
-app.get("/login", function (req, res) {
-  res.render("login");
-});
-
-//Handling user login
-app.post("/login", async function (req, res) {
   try {
-    // check if the user exists
-    const user = await User.findOne({ username: req.body.username });
-    if (user) {
-      //check if password matches
-      const result = req.body.password === user.password;
-      if (result) {
-        res.render("secret");
-      } else {
-        res.status(400).json({ error: "password doesn't match" });
-      }
-    } else {
-      res.status(400).json({ error: "User doesn't exist" });
-    }
+    const user = new User({ username: req.body.username, email: req.body.email });
+    const registeredUser = await User.register(user, req.body.password);
+    res.status(200).json(registeredUser);
   } catch (error) {
-    res.status(400).json({ error });
+    res.status(400).json({ error: error.message });
   }
 });
 
-//Handling user logout
-app.get("/logout", function (req, res) {
+// Showing login form
+app.get("/login", function (req, res) {
+  res.render("login", { title: "Login" });
+});
+
+// Handling user login
+app.post("/login", passport.authenticate("local", {
+  successRedirect: "/secret",
+  failureRedirect: "/login",
+  failureFlash: true
+}));
+
+// Handling user logout
+app.get("/logout", function (req, res, next) {
   req.logout(function (err) {
     if (err) {
       return next(err);
@@ -109,3 +107,5 @@ let port = process.env.PORT || 3000;
 app.listen(port, function () {
   console.log("Server Has Started!");
 });
+
+
