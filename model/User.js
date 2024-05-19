@@ -1,26 +1,32 @@
-// Filename - model/User.js
+const { DataTypes } = require('sequelize');
+const sequelize = require('./DB');
+const bcrypt = require('bcrypt');
 
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
-const passportLocalMongoose = require("passport-local-mongoose");
-
-var User = new Schema({
+const User = sequelize.define('User', {
   username: {
-    type: String,
+    type: DataTypes.STRING,
     unique: true,
-    required: true,
+    allowNull: false,
   },
   password: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
   },
-    email: {
-    type: String,
+  email: {
+    type: DataTypes.STRING,
     unique: true,
-    required: true,
+    allowNull: false,
   },
 });
 
-User.plugin(passportLocalMongoose);
+User.prototype.validPassword = async function (password) {
+  try {
+    return await bcrypt.compare(password, this.password);
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    return false;
+  }
+};
 
-module.exports = mongoose.model("User", User);
+
+module.exports = User;

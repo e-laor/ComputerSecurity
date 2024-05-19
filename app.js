@@ -1,16 +1,27 @@
-const express = require("express"),
-  mongoose = require("mongoose"),
-  passport = require("passport"),
-  bodyParser = require("body-parser"),
-  LocalStrategy = require("passport-local"),
-  passportLocalMongoose = require("passport-local-mongoose"),
-  session = require("express-session");
-const User = require("./model/User");
-const crypto = require('crypto');
-const connectDB = require("./DB");
+// app.js
 
-let app = express();
-connectDB();
+const express = require("express");
+const bodyParser = require("body-parser");
+const session = require("express-session");
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const crypto = require('crypto');
+const User = require("./model/User");
+const sequelize = require("./model/DB");
+const bcrypt = require('bcrypt');
+
+const app = express();
+
+// Synchronize models with the database
+(async () => {
+  try {
+    // This will create the tables if they don't already exist
+    await sequelize.sync();
+    console.log('Database synchronized successfully.');
+  } catch (error) {
+    console.error('Database synchronization error:', error);
+  }
+})();
 
 // Serve static files from the "public" directory
 app.use(express.static(__dirname + "/public"));
@@ -26,9 +37,36 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.use(new LocalStrategy(User.authenticate()));
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+// Configure passport to use LocalStrategy
+passport.use(new LocalStrategy(async (username, password, done) => {
+  try {
+    const user = await User.findOne({ where: { username: username } });
+    if (!user) {
+      return done(null, false, { message: 'Incorrect username.' });
+    }
+    const isValidPassword = await user.validPassword(password);
+    if (!isValidPassword) {
+      return done(null, false, { message: 'Incorrect password.' });
+    }
+    return done(null, user);
+  } catch (error) {
+    return done(error);
+  }
+}));
+
+// Configure passport to maintain user session
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findByPk(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
+});
 
 // Middleware to make 'user' available in all templates
 app.use((req, res, next) => {
@@ -40,6 +78,7 @@ app.use((req, res, next) => {
   console.log(`Request URL: ${req.url}`);
   next();
 });
+
 //=====================
 // ROUTES
 //=====================
@@ -59,18 +98,13 @@ app.get("/register", function (req, res) {
   res.render("register", { title: "Register" });
 });
 
-// Middleware to make 'user' available in all templates
-app.use((req, res, next) => {
-  res.locals.user = req.user;
-  next();
-});
-
 // Handling user signup
 app.post("/register", async (req, res) => {
   try {
-    const user = new User({ username: req.body.username, email: req.body.email });
-    const registeredUser = await User.register(user, req.body.password);
-    res.status(200).json(registeredUser);
+    const saltRounds = 10; // This determines the complexity of the hash
+    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+    const user = await User.create({ username: req.body.username, email: req.body.email, password: hashedPassword });
+    res.status(200).json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -103,9 +137,7 @@ function isLoggedIn(req, res, next) {
   res.redirect("/login");
 }
 
-let port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, function () {
   console.log("Server Has Started!");
 });
-
-
