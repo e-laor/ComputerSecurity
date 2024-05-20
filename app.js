@@ -107,14 +107,23 @@ app.get("/register", function (req, res) {
 // Handling user signup
 app.post("/register", async (req, res) => {
   try {
+    const { username, email, password, confirm_password } = req.body;
+
+    // Check if passwords match
+    if (password !== confirm_password) {
+      throw new Error("Passwords do not match");
+    }
+
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
-    const user = await User.create({ username: req.body.username, email: req.body.email, password: hashedPassword });
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const user = await User.create({ username, email, password: hashedPassword });
     req.flash("success", "You have registered successfully.");
-    res.status(200).json(user);
+    //res.status(200).json(user);
+    res.redirect("/register");
   } catch (error) {
     req.flash("error", error.message);
-    res.status(400).json({ error: error.message });
+    res.redirect("/register");
+    //res.status(400).json({ error: error.message });
   }
 });
 
@@ -125,9 +134,9 @@ app.get("/login", function (req, res) {
 
 // Handling user login
 app.post("/login", passport.authenticate("local", {
-  successRedirect: "/secret",
+  successRedirect: "/",
   failureRedirect: "/login",
-  failureFlash: true
+  failureFlash: true,
 }));
 
 // Handling user logout

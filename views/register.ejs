@@ -4,12 +4,25 @@
     <div class="row justify-content-center mt-5">
       <div class="col-md-6">
         <h1 class="text-center mb-4">Sign up form</h1>
+        <% if (error && error.length > 0) { %>
+          <div class="alert alert-danger" role="alert">
+            <%= error[0] %>
+          </div>
+        <% } else if (success && success.length) { %>
+          <div class="alert alert-success" role="alert">
+            <%= success[0] %>
+          </div>
+        <% } %>
+        
         <form action="/register" method="POST">
           <div class="mb-3">
             <input type="text" class="form-control" name="username" placeholder="Username" />
           </div>
           <div class="mb-3">
             <input type="password" class="form-control" name="password" placeholder="Password" />
+          </div>
+          <div class="mb-3">
+            <input type="password" class="form-control" name="confirm_password" placeholder="Confirm Password" />
           </div>
           <div class="mb-3">
             <input type="email" class="form-control" name="email" placeholder="Email" />
