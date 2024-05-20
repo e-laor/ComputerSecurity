@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const User = require("./model/User");
 const sequelize = require("./model/DB");
 const bcrypt = require('bcrypt');
+const flash = require("connect-flash");
 
 const app = express();
 
@@ -34,8 +35,18 @@ app.use(session({
   saveUninitialized: false,
 }));
 
+app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Middleware to make 'user' and 'flash messages' available in all templates
+app.use((req, res, next) => {
+  res.locals.user = req.user;
+  res.locals.error = req.flash("error");
+  res.locals.success = req.flash("success");
+  next();
+});
+
 
 // Configure passport to use LocalStrategy
 passport.use(new LocalStrategy(async (username, password, done) => {
@@ -68,11 +79,6 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// Middleware to make 'user' available in all templates
-app.use((req, res, next) => {
-  res.locals.user = req.user;
-  next();
-});
 
 app.use((req, res, next) => {
   console.log(`Request URL: ${req.url}`);
@@ -101,11 +107,13 @@ app.get("/register", function (req, res) {
 // Handling user signup
 app.post("/register", async (req, res) => {
   try {
-    const saltRounds = 10; // This determines the complexity of the hash
+    const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
     const user = await User.create({ username: req.body.username, email: req.body.email, password: hashedPassword });
+    req.flash("success", "You have registered successfully.");
     res.status(200).json(user);
   } catch (error) {
+    req.flash("error", error.message);
     res.status(400).json({ error: error.message });
   }
 });
@@ -128,12 +136,14 @@ app.get("/logout", function (req, res, next) {
     if (err) {
       return next(err);
     }
+    req.flash("success", "You have logged out successfully.");
     res.redirect("/");
   });
 });
 
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
+  req.flash("error", "You must be logged in to access that page.");
   res.redirect("/login");
 }
 
