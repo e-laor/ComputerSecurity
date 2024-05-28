@@ -17,16 +17,13 @@ const User = sequelize.define('User', {
     unique: true,
     allowNull: false,
   },
+  resetPasswordToken: DataTypes.STRING,
+  resetPasswordExpires: DataTypes.DATE,
 });
 
-User.prototype.validPassword = async function (password) {
-  try {
-    return await bcrypt.compare(password, this.password);
-  } catch (error) {
-    console.error('Error comparing passwords:', error);
-    return false;
-  }
+User.prototype.validPassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
 };
 
-
 module.exports = User;
+
