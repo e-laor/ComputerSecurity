@@ -141,7 +141,38 @@ app.post("/register", async (req, res) => {
     if (password !== confirm_password) {
       throw new Error("Passwords do not match");
     }
+    if (!password || !confirm_password) {
+      throw new Error("error", "Passwords can't be empty");
+    }
+    // Check if the username already exists
+    const existingUserByUsername = await User.findOne({ where: { username: username } });
+    if (existingUserByUsername) {
+      req.flash("error", "Username already taken");
+      return res.redirect("/register");
+    }
 
+    // Check if the email already exists
+    const existingUserByEmail = await User.findOne({ where: { email: email } });
+    if (existingUserByEmail) {
+      req.flash("error", "Email already registered");
+      return res.redirect("/register");
+    }
+
+       // Check if password length is 10 characters
+    if (password.length < 10  || password.length >= 10) {
+      req.flash("error", "Password must be 10 characters long");
+      return res.redirect("/register");
+    }
+
+        // Regex to check for password complexity
+    const passwordComplexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
+
+    // Check if password meets complexity requirements
+    if (!passwordComplexity.test(password)) {
+      req.flash("error", "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character");
+      return res.redirect("/register");
+    }
+  
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const user = await User.create({ username, email, password: hashedPassword });
@@ -300,6 +331,21 @@ app.post("/reset-password",restrictDirectAccess, async (req, res) => {
       req.flash("error", "Passwords can't be empty");
       return res.render("reset-password", { title: "Reset Password", email: email, error: req.flash("error"), success: req.flash("success") });
     }
+         // Check if password length is 10 characters
+    if (password.length < 10  || password.length >= 10) {
+      req.flash("error", "Password must be 10 characters long");
+      return res.redirect("/reset-password");
+    }
+
+        // Regex to check for password complexity
+    const passwordComplexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
+
+    // Check if password meets complexity requirements
+    if (!passwordComplexity.test(password)) {
+      req.flash("error", "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character");
+      return res.redirect("/reset-password");
+    }
+  
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     user.resetPasswordToken = null;
