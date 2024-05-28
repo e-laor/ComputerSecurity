@@ -105,7 +105,7 @@ app.use((req, res, next) => {
 
 // Middleware to restrict access to specific routes
 function restrictDirectAccess(req, res, next) {
-  if ((!req.session.isLoggedIn && !req.session.allowAccess) || user.isLocked) {
+  if (!req.session.isLoggedIn && !req.session.allowAccess) {
     req.flash("error", "Unauthorized access.");
     return res.redirect("/login");
   }
@@ -200,10 +200,14 @@ app.post("/forgot-password",restrictDirectAccess, async (req, res) => {
     }
 
     const user = await User.findOne({ where: { email: email } });
-
     if (!user) {
       throw new Error("User with this email does not exist");
     }
+
+    if (user.isLocked) {
+      throw new Error("This User is locked");
+    }
+
     req.session.userEmail=email;
     const token = generateToken();
 
