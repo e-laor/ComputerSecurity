@@ -43,21 +43,47 @@ app.use((req, res, next) => {
   next();
 });
 
-passport.use(new LocalStrategy(async (username, password, done) => {
+// Define a custom authentication callback function
+passport.use(new LocalStrategy({
+  passReqToCallback: true // Pass the request object to the callback
+},
+async (req, username, password, done) => { // Add req as the first parameter
   try {
     const user = await User.findOne({ where: { username: username } });
     if (!user) {
       return done(null, false, { message: 'Incorrect username.' });
     }
+
+    // Check if the account is locked
+    if (user.isLocked) {
+      return done(null, false, { message: 'Account is locked. Please contact support.' });
+    }
+
+    // Check if the account is locked due to too many failed attempts
+    if (req.session.failedLoginAttempts >= 3) {
+      // Lock the account
+      req.session.failedLoginAttempts = 0;
+      user.isLocked = 1;
+      await user.save();
+      return done(null, false, { message: 'Account locked due to too many failed login attempts. Please contact support.' });
+    }
+
     const isValidPassword = await user.validPassword(password);
     if (!isValidPassword) {
+      // Increment failed login attempts on failure
+      req.session.failedLoginAttempts += 1;
       return done(null, false, { message: 'Incorrect password.' });
     }
+
+    // Reset failed login attempts on successful login
+    req.session.failedLoginAttempts = 0;
+
     return done(null, user);
   } catch (error) {
     return done(error);
   }
-}));
+}
+));
 
 passport.serializeUser((user, done) => {
   done(null, user.id);
@@ -79,13 +105,12 @@ app.use((req, res, next) => {
 
 // Middleware to restrict access to specific routes
 function restrictDirectAccess(req, res, next) {
-  if (!req.session.isLoggedIn && !req.session.allowAccess) {
+  if ((!req.session.isLoggedIn && !req.session.allowAccess) || user.isLocked) {
     req.flash("error", "Unauthorized access.");
     return res.redirect("/login");
   }
   next();
 }
-
 
 //=====================
 // ROUTES

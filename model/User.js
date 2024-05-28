@@ -17,6 +17,10 @@ const User = sequelize.define('User', {
     unique: true,
     allowNull: false,
   },
+  isLocked: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   resetPasswordToken: DataTypes.STRING,
   resetPasswordExpires: DataTypes.DATE,
 });
