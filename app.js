@@ -79,12 +79,14 @@ app.use((req, res, next) => {
 
 // Middleware to restrict access to specific routes
 function restrictDirectAccess(req, res, next) {
-  if (!req.session.allowAccess) {
+  if (!req.session.isLoggedIn && !req.session.allowAccess) {
     req.flash("error", "Unauthorized access.");
     return res.redirect("/login");
   }
   next();
 }
+
+
 //=====================
 // ROUTES
 //=====================
@@ -131,10 +133,14 @@ app.get("/login", function (req, res) {
 });
 
 app.post("/login", passport.authenticate("local", {
-  successRedirect: "/",
   failureRedirect: "/login",
   failureFlash: true,
-}));
+}), (req, res) => {
+  // If authentication succeeds, set a flag in the session to indicate that the user is logged in
+  req.session.isLoggedIn = true;
+  req.session.userEmail = req.user.email;
+  res.redirect("/");
+});
 
 app.get("/logout", function (req, res, next) {
   req.logout(function (err) {
@@ -173,7 +179,7 @@ app.post("/forgot-password",restrictDirectAccess, async (req, res) => {
     if (!user) {
       throw new Error("User with this email does not exist");
     }
-
+    req.session.userEmail=email;
     const token = generateToken();
 
     user.resetPasswordToken = token;
@@ -240,9 +246,10 @@ app.post("/token",restrictDirectAccess, async (req, res) => {
   }
 });
 app.get("/reset-password",restrictDirectAccess, function (req, res) {
-  const email = req.query.email; // Retrieve email from query parameters
+  const email = req.session.userEmail;
   console.log(email);
-  req.flash("success", "You entered the correct token, please continue with the password change");
+  if(!req.session.isLoggedIn){
+    req.flash("success", "You entered the correct token, please continue with the password change");}
   res.render("reset-password", { title: "Reset Password", email: email, error: req.flash("error"), success: req.flash("success") });
 });
 
