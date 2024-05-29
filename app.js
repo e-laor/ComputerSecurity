@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const session = require("express-session");
-const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const crypto = require("crypto");
 const User = require("./model/User");
@@ -9,7 +8,8 @@ const sequelize = require("./model/DB");
 const bcrypt = require("bcrypt");
 const flash = require("connect-flash");
 const sgMail = require("@sendgrid/mail");
-const pass_secure = require("./password/pass_security");
+const pass_secure = require("./security/pass_security");
+const passport = require("./security/passport_config");
 
 require("dotenv").config();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -46,69 +46,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Define a custom authentication callback function
-passport.use(
-  new LocalStrategy(
-    {
-      passReqToCallback: true, // Pass the request object to the callback
-    },
-    async (req, username, password, done) => {
-      // Add req as the first parameter
-      try {
-        const user = await User.findOne({ where: { username: username } });
-        if (!user) {
-          return done(null, false, { message: "Incorrect username." });
-        }
-
-        // Check if the account is locked
-        if (user.isLocked) {
-          return done(null, false, {
-            message: "Account is locked. Please contact support.",
-          });
-        }
-
-        // Check if the account is locked due to too many failed attempts
-        if (req.session.failedLoginAttempts >= 3) {
-          // Lock the account
-          req.session.failedLoginAttempts = 0;
-          user.isLocked = 1;
-          await user.save();
-          return done(null, false, {
-            message:
-              "Account locked due to too many failed login attempts. Please contact support.",
-          });
-        }
-
-        const isValidPassword = await user.validPassword(password);
-        if (!isValidPassword) {
-          // Increment failed login attempts on failure
-          req.session.failedLoginAttempts += 1;
-          return done(null, false, { message: "Incorrect password." });
-        }
-
-        // Reset failed login attempts on successful login
-        req.session.failedLoginAttempts = 0;
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    }
-  )
-);
-
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findByPk(id);
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
-});
 
 app.use((req, res, next) => {
   console.log(`Request URL: ${req.url}`);
