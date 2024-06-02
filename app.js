@@ -6,11 +6,10 @@ const crypto = require("crypto");
 const User = require("./model/User");
 const Client = require('./model/Client');
 const sequelize = require("./model/DB");
-const bcrypt = require("bcrypt");
 const flash = require("connect-flash");
 const sgMail = require("@sendgrid/mail");
-const pass_secure = require("./security/pass_security");
 const passport = require("./security/passport_config");
+const middleware = require('./middleware');
 
 require("dotenv").config();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -79,60 +78,14 @@ function isLoggedIn(req, res, next) {
   req.flash("error", "You must be logged in to access that page.");
   res.redirect("/login");
 }
-
+// -- register route ---
 app.get("/register", function (req, res) {
   res.render("register", { title: "Register" });
 });
 
-app.post("/register", async (req, res) => {
-  try {
-    const { username, email, password, confirm_password } = req.body;
+app.post("/register", middleware.register);
 
-    if (password !== confirm_password) {
-      throw new Error("Passwords do not match");
-    }
-    if (!password || !confirm_password) {
-      throw new Error("error", "Passwords can't be empty");
-    }
-    // Check if the username already exists
-    const existingUserByUsername = await User.findOne({
-      where: { username: username },
-    });
-    if (existingUserByUsername) {
-      req.flash("error", "Username already taken");
-      return res.redirect("/register");
-    }
-
-    // Check if the email already exists
-    const existingUserByEmail = await User.findOne({ where: { email: email } });
-    if (existingUserByEmail) {
-      req.flash("error", "Email already registered");
-      return res.redirect("/register");
-    }
-
-    // check password strnength
-    const isValidPassword = pass_secure.isPasswordStrong(password);
-
-    // if password isn't strong enough return an error with the message
-    if (!isValidPassword.isValid) {
-      req.flash("error", isValidPassword.message);
-      return res.redirect("/register");
-    }
-
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
-    req.flash("success", "You have registered successfully.");
-    res.redirect("/register");
-  } catch (error) {
-    req.flash("error", error.message);
-    res.redirect("/register");
-  }
-});
+// ---- login route --- //
 
 app.get("/login", function (req, res) {
   res.render("login", { title: "Login" });
@@ -152,6 +105,8 @@ app.post(
   }
 );
 
+// ---- logout route --- //
+
 app.get("/logout", function (req, res, next) {
   req.logout(function (err) {
     if (err) {
@@ -161,6 +116,8 @@ app.get("/logout", function (req, res, next) {
     res.redirect("/");
   });
 });
+
+// ---- forgot password route --- //
 
 app.get("/init-forgot-password", (req, res) => {
   req.session.allowAccess = true;
@@ -178,53 +135,10 @@ function generateToken() {
   return token;
 }
 
-app.post("/forgot-password", restrictDirectAccess, async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      throw new Error("Email is required");
-    }
+app.post("/forgot-password", restrictDirectAccess, middleware.forgot_password);
 
-    const user = await User.findOne({ where: { email: email } });
-    if (!user) {
-      throw new Error("User with this email does not exist");
-    }
 
-    if (user.isLocked) {
-      throw new Error("This User is locked");
-    }
-
-    req.session.userEmail = email;
-    const token = generateToken();
-
-    user.resetPasswordToken = token;
-
-    const msg = {
-      to: email,
-      from: process.env.EMAIL_USER,
-      subject: "Password Reset Request",
-      text: `Your password reset token is: ${token}`,
-    };
-
-    await user.save();
-
-    sgMail
-      .send(msg)
-      .then(() => {
-        req.flash("success", "An email has been sent with a token.");
-        req.session.allowAccess = true; // Set session variable to allow access
-        res.redirect(`/token?email=${email}`); // Redirect to the token route after successfully sending the email
-      })
-      .catch((error) => {
-        console.error("Error sending email:", error);
-        req.flash("error", "Failed to send email. Please try again later.");
-        res.redirect("/forgot-password");
-      });
-  } catch (error) {
-    req.flash("error", error.message); // Display error for wrong email
-    res.redirect("/forgot-password");
-  }
-});
+// ---- token route --- //
 
 app.get("/token", restrictDirectAccess, function (req, res) {
   const email = req.query.email; // Retrieve email from query parameters
@@ -237,60 +151,10 @@ app.get("/token", restrictDirectAccess, function (req, res) {
   });
 });
 
-app.post("/token", restrictDirectAccess, async (req, res) => {
-  try {
-    const { token, email } = req.body; // Ensure email is extracted from req.body
-    if (!token) {
-      req.flash("error", "Token is required");
-      return res.render("token", {
-        title: "Token",
-        email: email,
-        error: req.flash("error"),
-        success: req.flash("success"),
-      });
-    }
 
-    const user = await User.findOne({ where: { email: email } });
-    if (!user) {
-      req.flash("error", "User not found");
-      return res.render("token", {
-        title: "Token",
-        email: email,
-        error: req.flash("error"),
-        success: req.flash("success"),
-      });
-    }
+app.post("/token", restrictDirectAccess, middleware.token);
 
-    if (token !== user.resetPasswordToken) {
-      req.flash("error", "Token is invalid");
-      return res.render("token", {
-        title: "Token",
-        email: email,
-        error: req.flash("error"),
-        success: req.flash("success"),
-      });
-    }
-
-    req.flash("success", "Token verified successfully.");
-    req.session.allowAccess = true; // Set session variable to allow access
-    return res.render("reset-password", {
-      title: "Reset Password",
-      email: email,
-      error: req.flash("error"),
-      success: req.flash("success"),
-    });
-  } catch (error) {
-    req.flash("error", error.message);
-    return res.render("token", {
-      title: "Token",
-      email: req.body.email,
-      error: req.flash("error"),
-      success: req.flash("success"),
-    });
-  }
-});
-
-
+// ---- reset password route --- //
 app.get("/reset-password", restrictDirectAccess, function (req, res) {
   const email = req.session.userEmail;
   console.log(email);
@@ -308,69 +172,9 @@ app.get("/reset-password", restrictDirectAccess, function (req, res) {
 });
 
 
-app.post("/reset-password", restrictDirectAccess, async (req, res) => {
-  const { password, confirm_password, email } = req.body;
-  const user = await User.findOne({ where: { email: email } });
+app.post("/reset-password", restrictDirectAccess, middleware.reset_password);
 
-  try {
-    if (!user) {
-      req.flash("error", "User not found.");
-      return res.render("reset-password", {
-        title: "Reset Password",
-        email: email,
-        error: req.flash("error"),
-      });
-    }
-
-    if (password !== confirm_password) {
-      req.flash("error", "Passwords do not match");
-      return res.render("reset-password", {
-        title: "Reset Password",
-        email: email,
-        error: req.flash("error"),
-      });
-    }
-    if (!password || !confirm_password) {
-      req.flash("error", "Passwords can't be empty");
-      return res.render("reset-password", {
-        title: "Reset Password",
-        email: email,
-        error: req.flash("error"),
-      });
-    }
-
-    // Check password strength
-    const isValidPassword = pass_secure.isPasswordStrong(password);
-
-    // If password isn't strong enough return an error with the message
-    if (!isValidPassword.isValid) {
-      req.flash("error", isValidPassword.message);
-      return res.render("reset-password", {
-        title: "Reset Password",
-        email: email,
-        error: req.flash("error"),
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
-
-    req.session.allowAccess = false; // Clear session variable to prevent further access
-    return res.redirect("/reset-password-success"); // Redirect to success page
-  } catch (error) {
-    req.flash("error", error.message);
-    return res.render("reset-password", {
-      title: "Reset Password",
-      email: email,
-      error: req.flash("error"),
-    });
-  }
-});
-
-// handling system page
+// ---- system route --- //
 
 app.get('/system', restrictDirectAccess, async (req, res) => {
   try {
@@ -403,10 +207,16 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
   }
 });
 
+// ---- add client successfully route --- //
+
 app.get("/system-success", restrictDirectAccess, (req, res) => {
   const clientName = req.query.name; // Retrieve the client's name from the query parameter
   res.render("system-success", { title: "Client Added", clientName: clientName });
 });
+
+//=====================
+// END OF ROUTES
+//=====================
 
 const port = process.env.PORT || 3000;
 app.listen(port, function () {
