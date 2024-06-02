@@ -3,13 +3,13 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const LocalStrategy = require("passport-local").Strategy;
 const crypto = require("crypto");
-const User = require("./model/User");
 const Client = require('./model/Client');
 const sequelize = require("./model/DB");
 const flash = require("connect-flash");
 const sgMail = require("@sendgrid/mail");
 const passport = require("./security/passport_config");
 const middleware = require('./middleware');
+const { get } = require("https");
 
 require("dotenv").config();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -128,6 +128,7 @@ app.get("/forgot-password", restrictDirectAccess, function (req, res) {
   res.render("forgot-password", { title: "Forgot Password" });
 });
 
+// check what is this function ?
 function generateToken() {
   const token =
     Math.random().toString(36).substring(2, 15) +
@@ -154,25 +155,29 @@ app.get("/token", restrictDirectAccess, function (req, res) {
 
 app.post("/token", restrictDirectAccess, middleware.token);
 
-// ---- reset password route --- //
-app.get("/reset-password", restrictDirectAccess, function (req, res) {
+// ---- change password route --- //
+app.get("/change_password", restrictDirectAccess, function (req, res) {
   const email = req.session.userEmail;
-  console.log(email);
   if (!req.session.isLoggedIn) {
     req.flash(
       "success",
       "You entered the correct token, please continue with the password change"
     );
   }
-  res.render("reset-password", {
-    title: "Reset Password",
+  res.render("change_password", {
+    title: "Change Password",
     email: email,
     error: req.flash("error"),
   });
 });
 
 
-app.post("/reset-password", restrictDirectAccess, middleware.reset_password);
+app.post("/change_password", restrictDirectAccess, middleware.change_password);
+
+app.get("/change_password_success", restrictDirectAccess, function (req, res){
+  res.render("change_password_success"); // Corrected "success"
+});
+
 
 // ---- system route --- //
 
