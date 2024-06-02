@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Success</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 20px;
+    }
+    .success-message {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <%- include('navbar', { user: user, isHome: false }) %>
+  <div class="container mt-5">
+    <h1>Client Added Successfully!</h1>
+    <div class="success-message">
+      <p>The following client was successfully added:</p>
+      <p><strong>Name:</strong> <%= clientName %></p>
+    </div>
+    <a href="/" class="btn btn-primary">Back to Home Page</a>
+  </div>
+</body>
+</html>

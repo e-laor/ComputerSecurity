@@ -4,6 +4,7 @@ const session = require("express-session");
 const LocalStrategy = require("passport-local").Strategy;
 const crypto = require("crypto");
 const User = require("./model/User");
+const Client = require('./model/Client');
 const sequelize = require("./model/DB");
 const bcrypt = require("bcrypt");
 const flash = require("connect-flash");
@@ -288,6 +289,8 @@ app.post("/token", restrictDirectAccess, async (req, res) => {
     });
   }
 });
+
+
 app.get("/reset-password", restrictDirectAccess, function (req, res) {
   const email = req.session.userEmail;
   console.log(email);
@@ -303,6 +306,7 @@ app.get("/reset-password", restrictDirectAccess, function (req, res) {
     error: req.flash("error"),
   });
 });
+
 
 app.post("/reset-password", restrictDirectAccess, async (req, res) => {
   const { password, confirm_password, email } = req.body;
@@ -366,8 +370,42 @@ app.post("/reset-password", restrictDirectAccess, async (req, res) => {
   }
 });
 
-app.get("/reset-password-success", function (req, res) {
-  res.render("reset-password-success", { title: "Password Reset Successful" });
+// handling system page
+
+app.get('/system', restrictDirectAccess, async (req, res) => {
+  try {
+    const clients = await Client.findAll(); // Fetch all clients from the database
+    res.render('system', {
+      title: 'System Page',
+      clients: clients,
+      error: req.flash('error')
+    });
+  } catch (error) {
+    console.log(error); // Log the error to see what went wrong
+    req.flash('error', 'Unable to fetch clients.');
+    res.redirect('/system');
+  }
+});
+
+
+
+
+app.post("/system", restrictDirectAccess, async (req, res) => {
+  try {
+    const { clientName, clientEmail, clientPhone } = req.body;
+    const newClient = await Client.create({ name: clientName, email: clientEmail, phone: clientPhone });
+    console.log(newClient);
+    res.redirect(`/system-success?name=${encodeURIComponent(clientName)}`);
+  } catch (error) {
+    console.log("Error creating client: ", error);
+    req.flash("error", error.message);
+    res.redirect("/system");
+  }
+});
+
+app.get("/system-success", restrictDirectAccess, (req, res) => {
+  const clientName = req.query.name; // Retrieve the client's name from the query parameter
+  res.render("system-success", { title: "Client Added", clientName: clientName });
 });
 
 const port = process.env.PORT || 3000;
