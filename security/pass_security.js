@@ -1,8 +1,7 @@
-// Dictionary words array
-const dictionaryWords = [
-  "password", "123456", "qwerty", "letmein", "welcome","hello","world"
-  // Add more words as needed
-];
+const fs = require('fs');
+
+// Load dictionary words from a file into a list
+const dictionaryWords = fs.readFileSync('./security/passwords.txt', 'utf-8').split('\n');
 
 // Function to replace common character substitutions
 const normalizePassword = (password) => {
@@ -14,16 +13,16 @@ const normalizePassword = (password) => {
 };
 
 // Check password strength and return true/false with a message
-const isPasswordStrong = (password) => {
-  const exactLength = 10;
+const isPasswordStrong = (password, username) => {
+  const minLength = 10;
 
   // Check the length
-  if (password.length !== exactLength) {
-    return { isValid: false, message: "Password must be exactly 10 characters long" };
+  if (password.length < minLength) {
+    return { isValid: false, message: "Password must be at least 10 characters long" };
   }
 
   // Check for at least one lowercase letter, one uppercase letter, and one number
-  const passwordComplexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{10}$/;
+  const passwordComplexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
 
   if (!passwordComplexity.test(password)) {
     return {
@@ -31,16 +30,24 @@ const isPasswordStrong = (password) => {
       message: "Password must contain at least one lowercase letter, one uppercase letter, and one number"
     };
   }
-
+  
+  // checks if password contains username
+  if (password.toLowerCase().includes(username)) {
+    return {
+      isValid: false,
+      message: "Password cannot contain username.",
+    };
+  }
+  
   // Normalize password to account for common substitutions
   const normalizedPassword = normalizePassword(password);
 
   // Check if the normalized password contains any dictionary words
   for (const word of dictionaryWords) {
-    if (normalizedPassword.toLowerCase().includes(word.toLowerCase())) {
+    if (normalizedPassword === word.trim()) {
       return {
         isValid: false,
-        message: "Password must not contain dictionary words"
+        message: "Password is too common, please choose a stronger one."
       };
     }
   }
@@ -50,7 +57,7 @@ const isPasswordStrong = (password) => {
 };
 
 // Example usage
-const password = "P@ssword11";
+const password = "lololoLeO1@!";
 const result = isPasswordStrong(password);
 console.log(result);  // Should return that the password is not valid
 

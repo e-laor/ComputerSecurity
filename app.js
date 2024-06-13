@@ -3,12 +3,12 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const LocalStrategy = require("passport-local").Strategy;
 const crypto = require("crypto");
-const Client = require('./model/Client');
+const Client = require("./model/Client");
 const sequelize = require("./model/DB");
 const flash = require("connect-flash");
 const sgMail = require("@sendgrid/mail");
 const passport = require("./security/passport_config");
-const middleware = require('./middleware');
+const middleware = require("./middleware");
 const { get } = require("https");
 
 require("dotenv").config();
@@ -45,7 +45,6 @@ app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   next();
 });
-
 
 app.use((req, res, next) => {
   console.log(`Request URL: ${req.url}`);
@@ -138,7 +137,6 @@ function generateToken() {
 
 app.post("/forgot-password", restrictDirectAccess, middleware.forgot_password);
 
-
 // ---- token route --- //
 
 app.get("/token", restrictDirectAccess, function (req, res) {
@@ -151,7 +149,6 @@ app.get("/token", restrictDirectAccess, function (req, res) {
     success: req.flash("success"),
   });
 });
-
 
 app.post("/token", restrictDirectAccess, middleware.token);
 
@@ -171,38 +168,37 @@ app.get("/change_password", restrictDirectAccess, function (req, res) {
   });
 });
 
-
 app.post("/change_password", restrictDirectAccess, middleware.change_password);
 
-app.get("/change_password_success", restrictDirectAccess, function (req, res){
+app.get("/change_password_success", restrictDirectAccess, function (req, res) {
   res.render("change_password_success"); // Corrected "success"
 });
 
-
 // ---- system route --- //
 
-app.get('/system', restrictDirectAccess, async (req, res) => {
+app.get("/system", restrictDirectAccess, async (req, res) => {
   try {
     const clients = await Client.findAll(); // Fetch all clients from the database
-    res.render('system', {
-      title: 'System Page',
+    res.render("system", {
+      title: "Add a new client",
       clients: clients,
-      error: req.flash('error')
+      error: req.flash("error"),
     });
   } catch (error) {
     console.log(error); // Log the error to see what went wrong
-    req.flash('error', 'Unable to fetch clients.');
-    res.redirect('/system');
+    req.flash("error", "Unable to fetch clients.");
+    res.redirect("/system");
   }
 });
-
-
-
 
 app.post("/system", restrictDirectAccess, async (req, res) => {
   try {
     const { clientName, clientEmail, clientPhone } = req.body;
-    const newClient = await Client.create({ name: clientName, email: clientEmail, phone: clientPhone });
+    const newClient = await Client.create({
+      name: clientName,
+      email: clientEmail,
+      phone: clientPhone,
+    });
     console.log(newClient);
     res.redirect(`/system-success?name=${encodeURIComponent(clientName)}`);
   } catch (error) {
@@ -216,7 +212,10 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
 
 app.get("/system-success", restrictDirectAccess, (req, res) => {
   const clientName = req.query.name; // Retrieve the client's name from the query parameter
-  res.render("system-success", { title: "Client Added", clientName: clientName });
+  res.render("system-success", {
+    title: "Client Added",
+    clientName: clientName,
+  });
 });
 
 //=====================
