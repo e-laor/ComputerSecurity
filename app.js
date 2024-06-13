@@ -10,6 +10,7 @@ const sgMail = require("@sendgrid/mail");
 const passport = require("./security/passport_config");
 const middleware = require("./middleware");
 const { escape, isEmail, isNumeric, isAlphanumeric } = require("validator");
+const { Op } = require("sequelize");
 
 const { get } = require("https");
 
@@ -218,7 +219,22 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
       );
     }
 
-    // If validation passes, proceed to create new client
+    // Check if client with the same name or email already exists
+    const existingClient = await Client.findOne({
+      where: {
+        [Op.or]: [{ name: clientName }, { email: clientEmail }],
+      },
+    });
+
+    if (existingClient) {
+      return res.redirect(
+        `/system-failed?reason=${encodeURIComponent(
+          "Client name or email already exists."
+        )}`
+      );
+    }
+
+    // If validation passes and client doesn't exist, proceed to create new client
     const newClient = await Client.create({
       name: escape(clientName),
       email: escape(clientEmail),
@@ -235,7 +251,6 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
     return res.redirect("/system");
   }
 });
-
 // ---- add client successfully route --- //
 
 app.get("/system-failed", restrictDirectAccess, (req, res) => {
