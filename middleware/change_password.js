@@ -35,7 +35,7 @@ async function change_password(req, res, next) {
     }
 
     // Check password strength
-    const isValidPassword = pass_secure.isPasswordStrong(password);
+    const isValidPassword = pass_secure.isPasswordStrong(password, user.username);
 
     // If password isn't strong enough return an error with the message
     if (!isValidPassword.isValid) {

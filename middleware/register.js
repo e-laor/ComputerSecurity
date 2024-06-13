@@ -28,7 +28,7 @@ async function register(req, res, next) {
     }
 
     // check password strength
-    const isValidPassword = pass_secure.isPasswordStrong(password);
+    const isValidPassword = pass_secure.isPasswordStrong(password, username);
 
     // if password isn't strong enough throw an error with the message
     if (!isValidPassword.isValid) {

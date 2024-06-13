@@ -183,7 +183,7 @@ app.get("/system", restrictDirectAccess, async (req, res) => {
   try {
     const clients = await Client.findAll(); // Fetch all clients from the database
     res.render("system", {
-      title: "System Page",
+      title: "Add a new client",
       clients: clients,
       error: req.flash("error"),
     });
