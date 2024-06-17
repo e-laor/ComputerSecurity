@@ -1,9 +1,9 @@
 // used for handling account login
 
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const User = require('../model/User'); 
-
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const User = require("../model/User");
+const sequelize = require("../model/DB.JS");
 
 passport.use(
   new LocalStrategy(
@@ -12,44 +12,25 @@ passport.use(
     },
     async (req, username, password, done) => {
       try {
-        const user = await User.findOne({ where: { username: username } });
-        if (!user) {
+        // Vulnerable query: directly using interpolated values
+        const query = `SELECT * FROM Users WHERE username = '${username}'`;
+        console.log(query);
+        const user = await sequelize.query(query, { model: User });
+        console.log(user);
+
+        if (!user || !user.length) {
           return done(null, false, { message: "Incorrect username." });
         }
 
-        // Check if the account is locked
-        if (user.isLocked) {
-          return done(null, false, {
-            message: "Account is locked. Please contact support.",
-          });
-        }
-
-        // Check if the account is locked due to too many failed attempts
-        if (req.session.failedLoginAttempts >= 3) {
-          // Lock the account
-          user.isLocked = true;
-          await user.save();
-          return done(null, false, {
-            message: "Account locked due to too many failed login attempts. Please contact support.",
-          });
-        }
-
-        const isValidPassword = await user.validPassword(password);
+        const isValidPassword = await user[0].validPassword(password);
         if (!isValidPassword) {
-          // Increment failed login attempts on failure
-          req.session.failedLoginAttempts = (req.session.failedLoginAttempts || 0) + 1;
-          if (req.session.failedLoginAttempts >= 3) {
-            // Lock the account
-            user.isLocked = true;
-            await user.save();
-          }
           return done(null, false, { message: "Incorrect password." });
         }
 
         // Reset failed login attempts on successful login
         req.session.failedLoginAttempts = 0;
 
-        return done(null, user); // If authentication succeeds
+        return done(null, user[0]); // If authentication succeeds
       } catch (error) {
         return done(error);
       }
