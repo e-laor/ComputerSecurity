@@ -13,10 +13,11 @@ passport.use(
     async (req, username, password, done) => {
       try {
         // Vulnerable query: directly using interpolated values
+        //example for sql injection: ' OR '1'='1
         const query = `SELECT * FROM Users WHERE username = '${username}'`;
-        console.log(query);
+        console.log("query", query);
         const user = await sequelize.query(query, { model: User });
-        console.log(user);
+        console.log("user", user);
 
         if (!user || !user.length) {
           return done(null, false, { message: "Incorrect username." });
