@@ -194,12 +194,17 @@ app.get("/system", restrictDirectAccess, async (req, res) => {
 app.post("/system", restrictDirectAccess, async (req, res) => {
   try {
     const { clientName, clientEmail, clientPhone } = req.body;
-    const newClient = await Client.create({
-      name: clientName,
-      email: clientEmail,
-      phone: clientPhone,
-    });
-    console.log(newClient);
+
+    // Simulate a vulnerable query (DO NOT USE IN PRODUCTION)
+    const insertClientQuery = `
+      INSERT INTO Clients (name, email, phone)
+      VALUES ('${clientName}', '${clientEmail}', '${clientPhone}')
+    `;
+
+    // Vulnerable execution of raw SQL query (DO NOT USE IN PRODUCTION)
+    await sequelize.query(insertClientQuery, { raw: true });
+
+    console.log(`New client created with name: ${clientName}`);
     res.redirect(`/system-success?name=${encodeURIComponent(clientName)}`);
   } catch (error) {
     console.log("Error creating client: ", error);
