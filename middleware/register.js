@@ -1,54 +1,63 @@
 const bcrypt = require('bcrypt');
 const User = require('../model/User');
-const pass_secure = require("../security/pass_security");
 const PasswordHistory = require('../model/PasswordHistory');
+const sequelize = require("../model/DB.JS");
 
 async function register(req, res, next) {
-  try {
-    const { username, email, password, confirm_password } = req.body;
+  const { username, email, password, confirm_password } = req.body;
 
+  try {
     if (password !== confirm_password) {
       throw new Error("Passwords do not match");
     }
     if (!password || !confirm_password) {
       throw new Error("Passwords can't be empty");
     }
-    // Check if the username already exists
-    const existingUserByUsername = await User.findOne({
-      where: { username: username },
-    });
-    if (existingUserByUsername) {
+
+    // Check if the username already exists (vulnerable to SQL injection)
+    const checkUsernameQuery = `
+      SELECT * FROM Users WHERE username = '${username}'
+    `;
+    const existingUserByUsername = await sequelize.query(checkUsernameQuery, { raw: true });
+    console.log(existingUserByUsername);
+
+    if (existingUserByUsername.length > 0) {
       throw new Error("Username already taken");
     }
 
-    // Check if the email already exists
-    const existingUserByEmail = await User.findOne({ where: { email: email } });
-    if (existingUserByEmail) {
+    // Check if the email already exists (vulnerable to SQL injection)
+    const checkEmailQuery = `
+      SELECT * FROM Users WHERE email = '${email}'
+    `;
+    const existingUserByEmail = await sequelize.query(checkEmailQuery, { raw: true });
+
+    if (existingUserByEmail.length > 0) {
       throw new Error("Email already registered");
     }
 
-    // check password strength
-    const isValidPassword = pass_secure.isPasswordStrong(password, username);
-
-    // if password isn't strong enough throw an error with the message
-    if (!isValidPassword.isValid) {
-      throw new Error(isValidPassword.message);
-    }
-
+    // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
+
+    // Insert the user into Users table (vulnerable to SQL injection)
+    const insertUserQuery = `
+      INSERT INTO Users (username, email, password)
+      VALUES ('${username}', '${email}', '${hashedPassword}')
+    `;
+    await sequelize.query(insertUserQuery, { raw: true });
+
+    // Optionally, store password history (vulnerable to SQL injection)
+    const user = await User.findOne({ where: { username: username } });
     await PasswordHistory.create({
       userId: user.id,
       password: hashedPassword
-    })
+    });
+
     req.flash("success", "You have registered successfully.");
     res.redirect("/register");
+
   } catch (error) {
+    console.error('Registration error:', error);
     req.flash("error", error.message);
     res.redirect("/register");
   }

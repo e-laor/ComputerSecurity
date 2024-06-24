@@ -4,6 +4,8 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const User = require("../model/User");
 const sequelize = require("../model/DB.JS");
+const bcrypt = require('bcrypt');
+
 
 passport.use(
   new LocalStrategy(
@@ -14,7 +16,8 @@ passport.use(
       try {
         // Vulnerable query: directly using interpolated values
         //example for sql injection: ' OR '1'='1
-        const query = `SELECT * FROM Users WHERE username = '${username}'`;
+       // const userInput = "' OR '1'='1' -- ";  // SQL injection string
+        const query = `SELECT * FROM users WHERE username = '${username}'`;
         console.log("query", query);
         const user = await sequelize.query(query, { model: User });
         console.log("user", user);
