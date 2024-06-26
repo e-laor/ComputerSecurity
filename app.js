@@ -179,15 +179,15 @@ app.get("/change_password_success", restrictDirectAccess, function (req, res) {
 app.get("/system", restrictDirectAccess, async (req, res) => {
   try {
     const clients = await Client.findAll(); // Fetch all clients from the database
+    const error = req.query.error; // Retrieve error from query parameters
     res.render("system", {
       title: "Add a new client",
       clients: clients,
-      error: req.flash("error"),
+      error: error, // Pass error message to template
     });
   } catch (error) {
-    console.log(error); // Log the error to see what went wrong
-    req.flash("error", "Unable to fetch clients.");
-    res.redirect("/system");
+    console.log("Error fetching clients:", error); // Log the error to see what went wrong
+    res.redirect("/system?error=Unable to fetch clients.");
   }
 });
 
@@ -207,11 +207,11 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
     console.log(`New client created with name: ${clientName}`);
     res.redirect(`/system-success?name=${encodeURIComponent(clientName)}`);
   } catch (error) {
-    console.log("Error creating client: ", error);
-    req.flash("error", error.message);
-    res.redirect("/system");
+    console.error("Error inserting client:", error.errors[0].message);
+    res.redirect(`/system?error=${encodeURIComponent(error.errors[0].message)}`);
   }
 });
+
 
 // ---- add client successfully route --- //
 

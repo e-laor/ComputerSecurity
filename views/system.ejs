@@ -1,66 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><%= title %></title>
-  </head>
-  <body>
-    <%- include('navbar', { user: user, isHome: false }) %>
-    <div class="container mt-5">
-      <h1><%= title %></h1>
-      <% if (error && error.length > 0) { %>
-      <div class="alert alert-danger" role="alert"><%= error[0] %></div>
-      <% } %>
-
-      <form action="/system" method="POST">
-        <div class="mb-3">
-          <label for="clientName" class="form-label">Client Name</label>
-          <input
-            type="text"
-            class="form-control"
-            id="clientName"
-            name="clientName"
-            required
-          />
-        </div>
-        <div class="mb-3">
-          <label for="clientEmail" class="form-label">Client Email</label>
-          <input
-            type="email"
-            class="form-control"
-            id="clientEmail"
-            name="clientEmail"
-            required
-          />
-        </div>
-        <div class="mb-3">
-          <label for="clientPhone" class="form-label">Client Phone</label>
-          <input
-            type="text"
-            class="form-control"
-            id="clientPhone"
-            name="clientPhone"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary">Add Client</button>
-      </form>
-
-      <!--
-      <h2 class="mt-5">Clients List</h2>
-
-      <div class="list-group">
-        <% clients.forEach(client => { %>
-        <a href="#" class="list-group-item list-group-item-action"
-          ><%= client.name %></a
-        >
-        <% }); %>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <!-- Include Bootstrap CSS -->
+  <link
+    rel="stylesheet"
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+  />
+</head>
+<body>
+  <%- include('navbar', { user: user, isHome: false }) %>
+  <div class="container mt-5">
+    <h1><%= title %></h1>
+    <% if (error && error.length > 0) { %>
+    <div class="alert alert-danger" role="alert"><%= error %></div>
+    <% } %>
+    <form action="/system" method="POST">
+      <div class="mb-3">
+        <label for="clientName" class="form-label">Client Name</label>
+        <input
+          type="text"
+          class="form-control"
+          id="clientName"
+          name="clientName"
+          required
+        />
       </div>
-    </div>
-    -->
-
-    <!-- Include Bootstrap JS -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  </body>
+      <div class="mb-3">
+        <label for="clientEmail" class="form-label">Client Email</label>
+        <input
+          type="email"
+          class="form-control"
+          id="clientEmail"
+          name="clientEmail"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="clientPhone" class="form-label">Client Phone</label>
+        <input
+          type="text"
+          class="form-control"
+          id="clientPhone"
+          name="clientPhone"
+          required
+        />
+      </div>
+      <button type="submit" class="btn btn-primary">Add Client</button>
+    </form>
+  </div>
+  <!-- Include Bootstrap JS -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
 </html>
