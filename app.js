@@ -261,11 +261,32 @@ app.get("/system-failed", restrictDirectAccess, (req, res) => {
   });
 });
 
-app.get("/system-success", restrictDirectAccess, (req, res) => {
+app.get("/system-success", restrictDirectAccess, async (req, res) => {
   const clientName = req.query.name; // Retrieve the client's name from the query parameter
+  const searchQuery = req.query.q; // Retrieve the search query from the query parameter
+
+  let clients = [];
+
+  if (searchQuery) {
+    try {
+      // Secure query using parameterized queries
+      clients = await Client.findAll({
+        where: {
+          name: {
+            [Op.like]: `%${searchQuery}%`
+          }
+        }
+      });
+    } catch (error) {
+      req.flash('error', 'An error occurred while searching for clients.');
+    }
+  }
+
   res.render("system-success", {
     title: "Client Added",
     clientName: clientName,
+    clients: clients,
+    error: req.flash('error')
   });
 });
 
