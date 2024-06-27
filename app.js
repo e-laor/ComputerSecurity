@@ -15,6 +15,7 @@ const { Op } = require("sequelize");
 const { get } = require("https");
 
 require("dotenv").config();
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
@@ -130,13 +131,7 @@ app.get("/forgot-password", restrictDirectAccess, function (req, res) {
   res.render("forgot-password", { title: "Forgot Password" });
 });
 
-// check what is this function ?
-function generateToken() {
-  const token =
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15);
-  return token;
-}
+
 
 app.post("/forgot-password", restrictDirectAccess, middleware.forgot_password);
 
