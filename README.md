@@ -11,3 +11,17 @@ DB_PORT=3306
 EMAIL_USER=ComunicationLTD2024@gmail.com
 EMAIL_PASS=
 SENDGRID_API_KEY=
+```
+
+## מגישים:
+עדן לאור
+
+אוהד בוקין
+
+חן חזום
+
+רני גמזו
+
+אושר כהן
+
+לירון שלום
