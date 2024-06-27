@@ -36,7 +36,7 @@ try {
 
     req.flash("success", "Token verified successfully.");
     req.session.allowAccess = true; // Set session variable to allow access
-    return res.render("reset-password", {
+    return res.render("change_password", {
       title: "Reset Password",
       email: email,
       error: req.flash("error"),
