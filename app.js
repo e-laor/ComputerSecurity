@@ -215,11 +215,27 @@ app.post("/system", restrictDirectAccess, async (req, res) => {
 
 // ---- add client successfully route --- //
 
-app.get("/system-success", restrictDirectAccess, (req, res) => {
+app.get("/system-success", restrictDirectAccess, async (req, res) => {
   const clientName = req.query.name; // Retrieve the client's name from the query parameter
+  const searchQuery = req.query.q; // Retrieve the search query from the query parameter
+
+  let clients = [];
+
+  if (searchQuery) {
+    try {
+      // Vulnerable query for demonstration purposes
+      const query = `SELECT * FROM Clients WHERE name LIKE '%${searchQuery}%'`;
+      clients = await sequelize.query(query, { model: Client });
+    } catch (error) {
+      req.flash('error', 'An error occurred while searching for clients.');
+    }
+  }
+
   res.render("system-success", {
     title: "Client Added",
     clientName: clientName,
+    clients: clients,
+    error: req.flash('error')
   });
 });
 

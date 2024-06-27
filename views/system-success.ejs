@@ -20,6 +20,13 @@
         padding: 15px;
         margin-bottom: 20px;
       }
+      .error-message {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
     </style>
   </head>
   <body>
@@ -32,6 +39,56 @@
         <p><strong>Name:</strong> <%- clientName %></p>
       </div>
       <a href="/" class="btn btn-primary">Back to Home Page</a>
+
+      <!-- Display error messages, if any -->
+      <% if (error && error.length > 0) { %>
+      <div class="error-message">
+        <%= error[0] %>
+      </div>
+      <% } %>
+
+      <!-- Search bar for existing clients -->
+      <div class="mt-5">
+        <h2>Search Existing Clients</h2>
+        <form action="/system-success" method="GET">
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search by client name" name="q" required>
+            <div class="input-group-append">
+              <button class="btn btn-outline-secondary" type="submit">Search</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Display search results in a table, if any -->
+      <% if (clients && clients.length > 0) { %>
+        <div class="mt-4">
+          <h3>Search Results:</h3>
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% clients.forEach(client => { %>
+                <tr>
+                  <td><%- client.name %></td>
+                  <td><%- client.email %></td>
+                  <td><%- client.phone %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else if (typeof clients !== 'undefined') { %>
+        <p>No clients found matching your search.</p>
+      <% } %>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   </body>
 </html>
